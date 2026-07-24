@@ -18,12 +18,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Normalize list
-        id: clean
+      - name: Save names to file
         run: |
-          echo "${{ github.event.inputs.extension_names }}" | xargs -I {} echo {} > names.txt
+          echo "${{ github.event.inputs.extension_names }}" > names.txt
           sed -i 's/[[:space:]]*$//' names.txt
-          echo "names=$(cat names.txt)" >> $GITHUB_OUTPUT
 
       - name: Validate all names exist
         run: |
@@ -36,16 +34,17 @@ jobs:
 
       - name: Remove extensions from index.json
         run: |
-          jq --argfile NAMES names.txt '
-            .extensionList.extensions |= map(select(.name as $n | ($NAMES | index($n)) | not))
-          ' index.json > index.json.tmp
+          jq '
+            .extensionList.extensions |=
+              map(select(.name as $n | (inputs | split("\n")) | index($n) | not))
+          ' index.json names.txt > index.json.tmp
           mv index.json.tmp index.json
 
       - name: Remove extensions from index.min.json
         run: |
-          jq --argfile NAMES names.txt '
-            map(select(.name as $n | ($NAMES | index($n)) | not))
-          ' index.min.json > index.min.json.tmp
+          jq '
+            map(select(.name as $n | (inputs | split("\n")) | index($n) | not))
+          ' index.min.json names.txt > index.min.json.tmp
           mv index.min.json.tmp index.min.json
 
       - name: Commit changes
@@ -53,7 +52,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.json index.min.json
-          git commit -m "Removed extensions: $(cat names.txt | tr '\n' ', ')" || echo "No changes"
+          git commit -m "Removed extensions: $(tr '\n' ', ' < names.txt)" || echo "No changes"
 
       - name: Push changes
         run: |
