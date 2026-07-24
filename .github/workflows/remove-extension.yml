@@ -25,13 +25,20 @@ jobs:
             | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
             > names.txt
 
-      - name: Validate all names exist
+      - name: Fuzzy match names to actual extension-list.txt entries
         run: |
-          while IFS= read -r NAME; do
-            if ! grep -Fxq "$NAME" extension-list.txt; then
-              echo "Extension not found: $NAME"
+          rm -f resolved.txt
+          touch resolved.txt
+
+          while IFS= read -r INPUT; do
+            MATCH=$(grep -i "$INPUT" extension-list.txt | head -n 1)
+
+            if [ -z "$MATCH" ]; then
+              echo "No fuzzy match found for: $INPUT"
               exit 1
             fi
+
+            echo "$MATCH" >> resolved.txt
           done < names.txt
 
       - name: Remove extensions from index.json
@@ -42,7 +49,7 @@ jobs:
               .extensionList.extensions |= map(select(.name != $NAME))
             ' index.json.tmp > index.json.new
             mv index.json.new index.json.tmp
-          done < names.txt
+          done < resolved.txt
           mv index.json.tmp index.json
 
       - name: Remove extensions from index.min.json
@@ -53,7 +60,7 @@ jobs:
               map(select(.name != $NAME))
             ' index.min.json.tmp > index.min.json.new
             mv index.min.json.new index.min.json.tmp
-          done < names.txt
+          done < resolved.txt
           mv index.min.json.tmp index.min.json
 
       - name: Append removed names to blacklist
@@ -62,14 +69,14 @@ jobs:
             if ! grep -Fxq "$NAME" blacklist.txt; then
               echo "$NAME" >> blacklist.txt
             fi
-          done < names.txt
+          done < resolved.txt
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.json index.min.json blacklist.txt
-          git commit -m "Removed extensions: $(tr '\n' ' ' < names.txt)" || echo "No changes"
+          git commit -m "Removed extensions (fuzzy matched): $(tr '\n' ' ' < resolved.txt)" || echo "No changes"
 
       - name: Push changes
         run: |
