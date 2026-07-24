@@ -32,25 +32,26 @@ jobs:
             fi
           done < names.txt
 
-      - name: Build jq filter
-        id: build
-        run: |
-          FILTER=""
-          while IFS= read -r NAME; do
-            ESCAPED_NAME=$(printf '%s\n' "$NAME" | sed 's/"/\\"/g')
-            FILTER="$FILTER and .name != \"$ESCAPED_NAME\""
-          done < names.txt
-          FILTER="${FILTER# and }"
-          echo "filter=$FILTER" >> $GITHUB_OUTPUT
-
       - name: Remove extensions from index.json
         run: |
-          jq '.extensionList.extensions |= map(select('"'"${{ steps.build.outputs.filter }}"'"'))' index.json > index.json.tmp
+          cp index.json index.json.tmp
+          while IFS= read -r NAME; do
+            jq --arg NAME "$NAME" '
+              .extensionList.extensions |= map(select(.name != $NAME))
+            ' index.json.tmp > index.json.new
+            mv index.json.new index.json.tmp
+          done < names.txt
           mv index.json.tmp index.json
 
       - name: Remove extensions from index.min.json
         run: |
-          jq 'map(select('"'"${{ steps.build.outputs.filter }}"'"'))' index.min.json > index.min.json.tmp
+          cp index.min.json index.min.json.tmp
+          while IFS= read -r NAME; do
+            jq --arg NAME "$NAME" '
+              map(select(.name != $NAME))
+            ' index.min.json.tmp > index.min.json.new
+            mv index.min.json.new index.min.json.tmp
+          done < names.txt
           mv index.min.json.tmp index.min.json
 
       - name: Append removed names to blacklist
