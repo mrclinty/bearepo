@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       extension_name:
-        description: "Type the extension name to remove (see extension-list.txt)"
+        description: "Type the extension name to remove (folder inside repo/)"
         required: true
         type: string
 
@@ -20,15 +20,14 @@ jobs:
 
       - name: Validate extension
         run: |
-          if ! grep -Fxq "${{ github.event.inputs.extension_name }}" extension-list.txt; then
-            echo "Extension not found in extension-list.txt"
+          if [ ! -d "repo/${{ github.event.inputs.extension_name }}" ]; then
+            echo "Extension not found: repo/${{ github.event.inputs.extension_name }}"
             exit 1
           fi
 
       - name: Remove extension folder
         run: |
-          TARGET="extensions/${{ github.event.inputs.extension_name }}"
-          rm -rf "$TARGET"
+          rm -rf "repo/${{ github.event.inputs.extension_name }}"
 
       - name: Commit changes
         run: |
