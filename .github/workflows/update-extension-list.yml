@@ -15,7 +15,7 @@ jobs:
 
       - name: Generate extension list
         run: |
-          ls repo > extension-list.txt
+          jq -r '.[].name' index.json > extension-list.txt
 
       - name: Commit list
         run: |
