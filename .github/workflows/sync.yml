@@ -15,34 +15,40 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run upstream sync
+      - name: Pull latest upstream changes
         run: |
-          ./sync.sh
+          git pull origin repo
 
       - name: Extract upstream extension names
         run: |
-          jq -r '.extensionList.extensions[].name' index.json > upstream.txt
+          jq -r '.extensionList.extensions[].name' index.json > upstream_all.txt
 
-                - name: Sort upstream extensions by language
+      - name: Extract English + All extensions
         run: |
-          # Extract English + All
           jq -r '
             .extensionList.extensions[]
             | select(.lang | ascii_downcase == "en" or .lang | ascii_downcase == "all")
             | .name
           ' index.json > upstream_en_all.txt
 
-          # Extract unwanted languages
+      - name: Extract unwanted languages
+        run: |
           jq -r '
             .extensionList.extensions[]
             | select(.lang | ascii_downcase != "en" and .lang | ascii_downcase != "all")
             | .name
           ' index.json > upstream_unwanted.txt
 
-
-      - name: Detect new extensions (pending)
+      - name: Add unwanted languages to blacklist
         run: |
-          comm -13 <(sort extension-list.txt) <(sort upstream.txt) > pending.txt
+          if [ -s upstream_unwanted.txt ]; then
+            cat upstream_unwanted.txt >> blacklist.txt
+            sort -u blacklist.txt -o blacklist.txt
+          fi
+
+      - name: Detect new English/All extensions (pending)
+        run: |
+          comm -13 <(sort extension-list.txt) <(sort upstream_en_all.txt) > pending.txt
 
       - name: Fuzzy resolve blacklist entries
         run: |
@@ -91,7 +97,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.json index.min.json extension-list.txt pending.txt
+          git add index.json index.min.json extension-list.txt pending.txt blacklist.txt
           git commit -m "Sync + Moderation Queue + Blacklist Enforcement" || echo "No changes"
 
       - name: Push changes
