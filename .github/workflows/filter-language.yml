@@ -15,8 +15,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Filter index.json
-        id: filter
+      - name: Filter index.json (object structure)
+        id: filter_json
         run: |
           REMOVED=$(jq -r '
             .extensionList.extensions
@@ -29,17 +29,29 @@ jobs:
           ' index.json > index.json.tmp
           mv index.json.tmp index.json
 
-          jq '
-            .extensionList.extensions |= map(select([.sources[].language] | index("en")))
-          ' index.min.json > index.min.json.tmp
-          mv index.min.json.tmp index.min.json
-
-          echo "removed<<EOF" >> $GITHUB_OUTPUT
+          echo "removed_json<<EOF" >> $GITHUB_OUTPUT
           echo "$REMOVED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Filter index.min.json (array structure)
+        id: filter_min
+        run: |
+          REMOVED_MIN=$(jq -r '
+            map(select([.sources[].language] | index("en") | not))
+            | .[].name
+          ' index.min.json)
+
+          jq '
+            map(select([.sources[].language] | index("en")))
+          ' index.min.json > index.min.json.tmp
+          mv index.min.json.tmp index.min.json
+
+          echo "removed_min<<EOF" >> $GITHUB_OUTPUT
+          echo "$REMOVED_MIN" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Commit changes
-        if: ${{ steps.filter.outputs.removed != '' }}
+        if: ${{ steps.filter_json.outputs.removed_json != '' || steps.filter_min.outputs.removed_min != '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -47,16 +59,16 @@ jobs:
           git commit -m "Removed non-English extensions" || echo "No changes"
 
       - name: Push changes
-        if: ${{ steps.filter.outputs.removed != '' }}
+        if: ${{ steps.filter_json.outputs.removed_json != '' || steps.filter_min.outputs.removed_min != '' }}
         run: |
           git push origin repo
 
       - name: Notify removal
-        if: ${{ steps.filter.outputs.removed != '' }}
+        if: ${{ steps.filter_json.outputs.removed_json != '' || steps.filter_min.outputs.removed_min != '' }}
         run: |
           gh issue create \
             --title "Non-English Extensions Removed" \
-            --body "The following extensions were removed:\n${{ steps.filter.outputs.removed }}" \
+            --body "Removed from index.json:\n${{ steps.filter_json.outputs.removed_json }}\n\nRemoved from index.min.json:\n${{ steps.filter_min.outputs.removed_min }}" \
             --label language-filter
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
