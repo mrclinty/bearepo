@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       extension_names:
-        description: "Enter one or more extension names (one per line)"
+        description: "Enter extension names separated by spaces"
         required: true
         type: string
 
@@ -18,10 +18,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Save names to file
+      - name: Convert space-separated list to names.txt
         run: |
-          echo "${{ github.event.inputs.extension_names }}" > names.txt
-          sed -i 's/[[:space:]]*$//' names.txt
+          echo "${{ github.event.inputs.extension_names }}" \
+            | tr ' ' '\n' \
+            | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+            > names.txt
 
       - name: Validate all names exist
         run: |
@@ -47,28 +49,3 @@ jobs:
         run: |
           cp index.min.json index.min.json.tmp
           while IFS= read -r NAME; do
-            jq --arg NAME "$NAME" '
-              map(select(.name != $NAME))
-            ' index.min.json.tmp > index.min.json.new
-            mv index.min.json.new index.min.json.tmp
-          done < names.txt
-          mv index.min.json.tmp index.min.json
-
-      - name: Append removed names to blacklist
-        run: |
-          while IFS= read -r NAME; do
-            if ! grep -Fxq "$NAME" blacklist.txt; then
-              echo "$NAME" >> blacklist.txt
-            fi
-          done < names.txt
-
-      - name: Commit changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.json index.min.json blacklist.txt
-          git commit -m "Removed extensions: $(tr '\n' ', ' < names.txt)" || echo "No changes"
-
-      - name: Push changes
-        run: |
-          git push origin repo
