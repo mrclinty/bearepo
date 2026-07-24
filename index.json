@@ -14172,27 +14172,6 @@
             "homeUrl": "https://mangazin.org"
           }
         ]
-      },
-      {
-        "name": "Zinmanga.net",
-        "packageName": "eu.kanade.tachiyomi.extension.en.zinmanganet",
-        "resources": {
-          "apkUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions@repo/apk/tachiyomi-en.zinmanganet-v1.4.52.apk",
-          "iconUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions@repo/icon/eu.kanade.tachiyomi.extension.en.zinmanganet.png",
-          "jarUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/jar/tachiyomi-en.zinmanganet-v1.4.52.jar"
-        },
-        "extensionLib": "1.4",
-        "versionCode": "52",
-        "versionName": "1.4.52",
-        "contentWarning": "CONTENT_WARNING_SAFE",
-        "sources": [
-          {
-            "id": "1987105317893699901",
-            "name": "Zinmanga.net",
-            "language": "en",
-            "homeUrl": "https://zinmanga.net"
-          }
-        ]
       }
     ]
   }
