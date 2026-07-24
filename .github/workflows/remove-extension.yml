@@ -4,31 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       extension_name:
-        description: "Select an extension to remove"
+        description: "Type the extension name to remove (see extension-list.txt)"
         required: true
-        type: choice
-        options:
-          - placeholder   # will be replaced dynamically
+        type: string
 
 jobs:
-  generate-dropdown:
-    runs-on: ubuntu-latest
-    outputs:
-      options: ${{ steps.build.outputs.options }}
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Build extension list
-        id: build
-        run: |
-          EXTENSIONS=$(ls extensions)
-          JSON=$(printf '%s\n' "$EXTENSIONS" | jq -R . | jq -s .)
-          echo "options=$JSON" >> $GITHUB_OUTPUT
-
-  remove-extension:
-    needs: generate-dropdown
+  remove:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,27 +18,24 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate extension
+        run: |
+          if ! grep -Fxq "${{ github.event.inputs.extension_name }}" extension-list.txt; then
+            echo "Extension not found in extension-list.txt"
+            exit 1
+          fi
+
       - name: Remove extension folder
         run: |
           TARGET="extensions/${{ github.event.inputs.extension_name }}"
-          if [ -d "$TARGET" ]; then
-            rm -rf "$TARGET"
-          else
-            echo "Extension not found: $TARGET"
-            exit 1
-          fi
+          rm -rf "$TARGET"
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Remove extension: ${{ github.event.inputs.extension_name }}" || echo "No changes to commit"
-
-      - name: Push changes
-        run: |
-          git push origin repo
-
+          git commit -m "Removed extension: ${{ github.event.inputs.extension_name }}" || echo "No changes"
 
       - name: Push changes
         run: |
