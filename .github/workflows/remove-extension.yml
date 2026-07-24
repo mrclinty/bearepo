@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       extension_name:
-        description: "Type the extension name to remove (folder inside repo/)"
+        description: "Choose an extension from extension-list.txt"
         required: true
         type: string
 
@@ -18,23 +18,29 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate extension
+      - name: Normalize extension name
+        id: clean
         run: |
-          if [ ! -d "repo/${{ github.event.inputs.extension_name }}" ]; then
-            echo "Extension not found: repo/${{ github.event.inputs.extension_name }}"
+          CLEANED=$(echo "${{ github.event.inputs.extension_name }}" | xargs)
+          echo "name=$CLEANED" >> $GITHUB_OUTPUT
+
+      - name: Validate extension exists in list
+        run: |
+          if ! grep -Fxq "${{ steps.clean.outputs.name }}" extension-list.txt; then
+            echo "Extension not found in extension-list.txt"
             exit 1
           fi
 
       - name: Remove extension folder
         run: |
-          rm -rf "repo/${{ github.event.inputs.extension_name }}"
+          rm -rf "repo/${{ steps.clean.outputs.name }}"
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Removed extension: ${{ github.event.inputs.extension_name }}" || echo "No changes"
+          git commit -m "Removed extension: ${{ steps.clean.outputs.name }}" || echo "No changes"
 
       - name: Push changes
         run: |
