@@ -31,15 +31,21 @@ jobs:
             exit 1
           fi
 
-      - name: Remove extension folder
+      - name: Remove extension from index.json
         run: |
-          rm -rf "repo/${{ steps.clean.outputs.name }}"
+          jq --arg NAME "${{ steps.clean.outputs.name }}" 'map(select(.name != $NAME))' index.json > index.json.tmp
+          mv index.json.tmp index.json
+
+      - name: Remove extension from index.min.json
+        run: |
+          jq --arg NAME "${{ steps.clean.outputs.name }}" 'map(select(.name != $NAME))' index.min.json > index.min.json.tmp
+          mv index.min.json.tmp index.min.json
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add index.json index.min.json
           git commit -m "Removed extension: ${{ steps.clean.outputs.name }}" || echo "No changes"
 
       - name: Push changes
