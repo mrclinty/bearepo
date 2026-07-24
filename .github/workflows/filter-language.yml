@@ -15,25 +15,25 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Remove non-English extensions
+      - name: Filter index.json
         id: filter
         run: |
-          REMOVED=""
-          for EXT in repo/*; do
-            if [ -d "$EXT" ]; then
-              MANIFEST="$EXT/manifest.json"
-              if [ -f "$MANIFEST" ]; then
-                LANG=$(jq -r '.lang // empty' "$MANIFEST")
-                if [ "$LANG" != "en" ]; then
-                  rm -rf "$EXT"
-                  REMOVED="$REMOVED\n$(basename "$EXT")"
-                fi
-              fi
-            fi
-          done
+          REMOVED=$(jq -r '
+            map(select(.sources[].language != "en")) | .[].name
+          ' index.json)
+
+          jq '
+            map(select(.sources[].language == "en"))
+          ' index.json > index.json.tmp
+          mv index.json.tmp index.json
+
+          jq '
+            map(select(.sources[].language == "en"))
+          ' index.min.json > index.min.json.tmp
+          mv index.min.json.tmp index.min.json
 
           echo "removed<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$REMOVED" >> $GITHUB_OUTPUT
+          echo "$REMOVED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Commit changes
@@ -41,7 +41,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add index.json index.min.json
           git commit -m "Removed non-English extensions" || echo "No changes"
 
       - name: Push changes
