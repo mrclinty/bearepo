@@ -23,6 +23,23 @@ jobs:
         run: |
           jq -r '.extensionList.extensions[].name' index.json > upstream.txt
 
+                - name: Sort upstream extensions by language
+        run: |
+          # Extract English + All
+          jq -r '
+            .extensionList.extensions[]
+            | select(.lang | ascii_downcase == "en" or .lang | ascii_downcase == "all")
+            | .name
+          ' index.json > upstream_en_all.txt
+
+          # Extract unwanted languages
+          jq -r '
+            .extensionList.extensions[]
+            | select(.lang | ascii_downcase != "en" and .lang | ascii_downcase != "all")
+            | .name
+          ' index.json > upstream_unwanted.txt
+
+
       - name: Detect new extensions (pending)
         run: |
           comm -13 <(sort extension-list.txt) <(sort upstream.txt) > pending.txt
