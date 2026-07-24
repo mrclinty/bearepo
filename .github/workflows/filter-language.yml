@@ -19,16 +19,18 @@ jobs:
         id: filter
         run: |
           REMOVED=$(jq -r '
-            map(select(.sources[].language != "en")) | .[].name
+            .extensionList.extensions
+            | map(select([.sources[].language] | index("en") | not))
+            | .[].name
           ' index.json)
 
           jq '
-            map(select(.sources[].language == "en"))
+            .extensionList.extensions |= map(select([.sources[].language] | index("en")))
           ' index.json > index.json.tmp
           mv index.json.tmp index.json
 
           jq '
-            map(select(.sources[].language == "en"))
+            .extensionList.extensions |= map(select([.sources[].language] | index("en")))
           ' index.min.json > index.min.json.tmp
           mv index.min.json.tmp index.min.json
 
