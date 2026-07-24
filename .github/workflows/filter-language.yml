@@ -1,4 +1,25 @@
-        for EXT in extensions/*; do
+name: Filter Non-English Extensions
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove non-English extensions
+        id: filter
+        run: |
+          REMOVED=""
+          for EXT in repo/*; do
             if [ -d "$EXT" ]; then
               MANIFEST="$EXT/manifest.json"
               if [ -f "$MANIFEST" ]; then
