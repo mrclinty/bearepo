@@ -1,10 +1,10 @@
-name: Remove Extension
+name: Remove Extensions
 
 on:
   workflow_dispatch:
     inputs:
-      extension_name:
-        description: "Choose an extension from extension-list.txt"
+      extension_names:
+        description: "Enter one or more extension names (one per line)"
         required: true
         type: string
 
@@ -18,30 +18,33 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Normalize extension name
+      - name: Normalize list
         id: clean
         run: |
-          CLEANED=$(echo "${{ github.event.inputs.extension_name }}" | xargs)
-          echo "name=$CLEANED" >> $GITHUB_OUTPUT
+          echo "${{ github.event.inputs.extension_names }}" | xargs -I {} echo {} > names.txt
+          sed -i 's/[[:space:]]*$//' names.txt
+          echo "names=$(cat names.txt)" >> $GITHUB_OUTPUT
 
-      - name: Validate extension exists in list
+      - name: Validate all names exist
         run: |
-          if ! grep -Fxq "${{ steps.clean.outputs.name }}" extension-list.txt; then
-            echo "Extension not found in extension-list.txt"
-            exit 1
-          fi
+          while IFS= read -r NAME; do
+            if ! grep -Fxq "$NAME" extension-list.txt; then
+              echo "Extension not found: $NAME"
+              exit 1
+            fi
+          done < names.txt
 
-      - name: Remove extension from index.json
+      - name: Remove extensions from index.json
         run: |
-          jq --arg NAME "${{ steps.clean.outputs.name }}" '
-            .extensionList.extensions |= map(select(.name != $NAME))
+          jq --argfile NAMES names.txt '
+            .extensionList.extensions |= map(select(.name as $n | ($NAMES | index($n)) | not))
           ' index.json > index.json.tmp
           mv index.json.tmp index.json
 
-      - name: Remove extension from index.min.json
+      - name: Remove extensions from index.min.json
         run: |
-          jq --arg NAME "${{ steps.clean.outputs.name }}" '
-            .extensionList.extensions |= map(select(.name != $NAME))
+          jq --argfile NAMES names.txt '
+            map(select(.name as $n | ($NAMES | index($n)) | not))
           ' index.min.json > index.min.json.tmp
           mv index.min.json.tmp index.min.json
 
@@ -50,7 +53,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.json index.min.json
-          git commit -m "Removed extension: ${{ steps.clean.outputs.name }}" || echo "No changes"
+          git commit -m "Removed extensions: $(cat names.txt | tr '\n' ', ')" || echo "No changes"
 
       - name: Push changes
         run: |
