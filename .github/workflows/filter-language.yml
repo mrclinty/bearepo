@@ -1,0 +1,63 @@
+name: Filter Non-English Extensions
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove non-English extensions
+        id: filter
+        run: |
+          REMOVED=""
+          for EXT in extensions/*; do
+            if [ -d "$EXT" ]; then
+              MANIFEST="$EXT/manifest.json"
+              if [ -f "$MANIFEST" ]; then
+                LANG=$(jq -r '.lang // empty' "$MANIFEST")
+                if [ "$LANG" != "en" ]; then
+                  rm -rf "$EXT"
+                  REMOVED="$REMOVED\n$(basename "$EXT")"
+                fi
+              fi
+            fi
+          done
+
+          echo "removed<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$REMOVED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit changes
+        if: ${{ steps.filter.outputs.removed != '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Removed non-English extensions" || echo "No changes"
+
+      - name: Push changes
+        if: ${{ steps.filter.outputs.removed != '' }}
+        run: |
+          git push origin repo
+
+      - name: Notify removal
+        if: ${{ steps.filter.outputs.removed != '' }}
+        uses: peter-evans/create-issue@v4
+        with:
+          title: "Non-English Extensions Removed"
+          body: |
+            The following extensions were removed because they were not English:
+
+            ```
+            ${{ steps.filter.outputs.removed }}
+            ```
+          labels: language-filter
