@@ -1,0 +1,41 @@
+name: Remove Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      extension_name:
+        description: "Name of the extension folder to remove"
+        required: true
+        type: string
+
+jobs:
+  remove-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove extension folder
+        run: |
+          TARGET="extensions/${{ github.event.inputs.extension_name }}"
+          if [ -d "$TARGET" ]; then
+            echo "Removing $TARGET"
+            rm -rf "$TARGET"
+          else
+            echo "Extension not found: $TARGET"
+            exit 1
+          fi
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove extension: ${{ github.event.inputs.extension_name }}" || echo "No changes to commit"
+
+      - name: Push changes
+        run: |
+          git push origin repo
