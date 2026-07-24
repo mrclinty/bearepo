@@ -9,20 +9,11 @@ jobs:
   filter:
     runs-on: ubuntu-latest
 
-      - name: Notify removal
-        if: ${{ steps.filter.outputs.removed != '' }}
-        uses: peter-evans/create-issue@v4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Non-English Extensions Removed"
-          body: |
-            The following extensions were removed because they were not English:
-
-            ```
-            ${{ steps.filter.outputs.removed }}
-            ```
-          labels: language-filter
-
 
       - name: Remove non-English extensions
         id: filter
@@ -60,13 +51,10 @@ jobs:
 
       - name: Notify removal
         if: ${{ steps.filter.outputs.removed != '' }}
-        uses: peter-evans/create-issue@v4
-        with:
-          title: "Non-English Extensions Removed"
-          body: |
-            The following extensions were removed because they were not English:
-
-            ```
-            ${{ steps.filter.outputs.removed }}
-            ```
-          labels: language-filter
+        run: |
+          gh issue create \
+            --title "Non-English Extensions Removed" \
+            --body "The following extensions were removed:\n${{ steps.filter.outputs.removed }}" \
+            --label language-filter
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
