@@ -1,0 +1,62 @@
+name: Reject Extensions (Blacklist)
+
+on:
+  workflow_dispatch:
+    inputs:
+      extension_names:
+        description: "Extensions to blacklist (space-separated)"
+        required: true
+        type: string
+
+jobs:
+  reject:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Convert input to list
+        run: |
+          echo "${{ github.event.inputs.extension_names }}" | tr ' ' '\n' > reject.txt
+
+      - name: Fuzzy match against pending
+        run: |
+          rm -f resolved.txt
+          touch resolved.txt
+
+          while IFS= read -r INPUT; do
+            MATCH=$(grep -i "$INPUT" pending.txt | head -n 1)
+            if [ -z "$MATCH" ]; then
+              echo "Not found in pending: $INPUT"
+              exit 1
+            fi
+            echo "$MATCH" >> resolved.txt
+          done < reject.txt
+
+      - name: Add to blacklist
+        run: |
+          cat resolved.txt >> blacklist.txt
+          sort -u blacklist.txt -o blacklist.txt
+
+      - name: Remove from pending.txt
+        run: |
+          cp pending.txt pending.tmp
+          while IFS= read -r NAME; do
+            grep -i -v "$NAME" pending.tmp > pending.new
+            mv pending.new pending.tmp
+          done < resolved.txt
+          mv pending.tmp pending.txt
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add blacklist.txt pending.txt
+          git commit -m "Blacklisted extensions: $(tr '\n' ' ' < resolved.txt)" || echo "No changes"
+
+      - name: Push changes
+        run: |
+          git push origin repo
