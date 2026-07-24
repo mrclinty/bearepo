@@ -1,0 +1,82 @@
+name: Sync Upstream + Moderation Queue
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run upstream sync
+        run: |
+          ./sync.sh
+
+      - name: Extract upstream extension names
+        run: |
+          jq -r '.extensionList.extensions[].name' index.json > upstream.txt
+
+      - name: Detect new extensions (pending)
+        run: |
+          comm -13 <(sort extension-list.txt) <(sort upstream.txt) > pending.txt
+
+      - name: Fuzzy resolve blacklist entries
+        run: |
+          rm -f resolved-blacklist.txt
+          touch resolved-blacklist.txt
+
+          while IFS= read -r INPUT; do
+            MATCH=$(grep -i "$INPUT" extension-list.txt | head -n 1)
+            if [ -n "$MATCH" ]; then
+              echo "$MATCH" >> resolved-blacklist.txt
+            fi
+          done < blacklist.txt
+
+      - name: Enforce blacklist in index.json
+        run: |
+          cp index.json index.json.tmp
+          while IFS= read -r NAME; do
+            jq --arg NAME "$NAME" '
+              .extensionList.extensions |= map(select(.name != $NAME))
+            ' index.json.tmp > index.json.new
+            mv index.json.new index.json.tmp
+          done < resolved-blacklist.txt
+          mv index.json.tmp index.json
+
+      - name: Enforce blacklist in index.min.json
+        run: |
+          cp index.min.json index.min.json.tmp
+          while IFS= read -r NAME; do
+            jq --arg NAME "$NAME" '
+              map(select(.name != $NAME))
+            ' index.min.json.tmp > index.min.json.new
+            mv index.min.json.new index.min.json.tmp
+          done < resolved-blacklist.txt
+          mv index.min.json.tmp index.min.json
+
+      - name: Enforce blacklist in extension-list.txt
+        run: |
+          cp extension-list.txt extension-list.tmp
+          while IFS= read -r NAME; do
+            grep -i -v "$NAME" extension-list.tmp > extension-list.new
+            mv extension-list.new extension-list.tmp
+          done < resolved-blacklist.txt
+          mv extension-list.tmp extension-list.txt
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.json index.min.json extension-list.txt pending.txt
+          git commit -m "Sync + Moderation Queue + Blacklist Enforcement" || echo "No changes"
+
+      - name: Push changes
+        run: |
+          git push origin repo
