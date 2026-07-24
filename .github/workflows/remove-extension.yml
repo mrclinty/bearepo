@@ -44,12 +44,12 @@ jobs:
 
       - name: Remove extensions from index.json
         run: |
-          jq ".extensionList.extensions |= map(select(${{ steps.build.outputs.filter }}))" index.json > index.json.tmp
+          jq '.extensionList.extensions |= map(select('"${{ steps.build.outputs.filter }}"'))' index.json > index.json.tmp
           mv index.json.tmp index.json
 
       - name: Remove extensions from index.min.json
         run: |
-          jq "map(select(${{ steps.build.outputs.filter }}))" index.min.json > index.min.json.tmp
+          jq 'map(select('"${{ steps.build.outputs.filter }}"'))' index.min.json > index.min.json.tmp
           mv index.min.json.tmp index.min.json
 
       - name: Append removed names to blacklist
