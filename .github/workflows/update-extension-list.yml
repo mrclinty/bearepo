@@ -15,7 +15,7 @@ jobs:
 
       - name: Generate extension list
         run: |
-          ls extensions > extension-list.txt
+          ls repo > extension-list.txt
 
       - name: Commit list
         run: |
