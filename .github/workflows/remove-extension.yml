@@ -33,12 +33,16 @@ jobs:
 
       - name: Remove extension from index.json
         run: |
-          jq --arg NAME "${{ steps.clean.outputs.name }}" 'map(select(.name != $NAME))' index.json > index.json.tmp
+          jq --arg NAME "${{ steps.clean.outputs.name }}" '
+            .extensionList.extensions |= map(select(.name != $NAME))
+          ' index.json > index.json.tmp
           mv index.json.tmp index.json
 
       - name: Remove extension from index.min.json
         run: |
-          jq --arg NAME "${{ steps.clean.outputs.name }}" 'map(select(.name != $NAME))' index.min.json > index.min.json.tmp
+          jq --arg NAME "${{ steps.clean.outputs.name }}" '
+            .extensionList.extensions |= map(select(.name != $NAME))
+          ' index.min.json > index.min.json.tmp
           mv index.min.json.tmp index.min.json
 
       - name: Commit changes
