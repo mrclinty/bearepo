@@ -1,42 +1,9 @@
-name: Review Pending Extensions
-
-on:
-  workflow_dispatch:
-    inputs:
-      blacklist:
-        description: "Comma-separated list of extensions to BLACKLIST (others will be APPROVED)"
-        required: false
-        type: string
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          ref: repo
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Show pending list
-        run: |
-          echo "====================================="
-          echo "           PENDING EXTENSIONS"
-          echo "====================================="
-          if [ -s pending.txt ]; then
-            cat pending.txt
-          else
-            echo "(none)"
-          fi
-          echo "====================================="
-
       - name: Process selections
         run: |
           touch approved.txt blacklist.txt
 
-          # Convert input to array
-          IFS=',' read -ra BLACKLIST <<< "${{ github.event.inputs.blacklist }}"
+          # Split input by spaces instead of commas
+          IFS=' ' read -ra BLACKLIST <<< "${{ github.event.inputs.blacklist }}"
 
           # Normalize whitespace
           CLEAN_BL=()
@@ -62,14 +29,3 @@ jobs:
 
           # Clear pending
           > pending.txt
-
-      - name: Commit changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add approved.txt blacklist.txt pending.txt
-          git commit -m "Reviewed pending extensions" || echo "No changes"
-
-      - name: Push changes
-        run: |
-          git push origin repo
