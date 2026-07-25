@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       approve_list:
-        description: "Comma-separated list of extensions to approve"
+        description: "Comma-separated list of extensions to APPROVE (others will be BLACKLISTED)"
         required: true
         type: string
 
@@ -21,9 +21,15 @@ jobs:
 
       - name: Show pending extensions
         run: |
-          echo "Pending extensions:"
-          echo "-------------------"
-          cat pending.txt || echo "(none)"
+          echo "====================================="
+          echo "           PENDING EXTENSIONS"
+          echo "====================================="
+          if [ -s pending.txt ]; then
+            cat pending.txt
+          else
+            echo "(none)"
+          fi
+          echo "====================================="
 
       - name: Process approvals and rejections
         run: |
@@ -42,13 +48,17 @@ jobs:
           # Ensure moderation files exist
           touch approved.txt blacklist.txt
 
-          # Process each pending extension
+          echo "Approving:"
+          printf '%s\n' "${APPROVE_CLEAN[@]}"
+
+          echo "Blacklisting:"
           for EXT in "${PENDING[@]}"; do
             if printf '%s\n' "${APPROVE_CLEAN[@]}" | grep -qxF "$EXT"; then
               # APPROVE
               grep -qxF "$EXT" approved.txt || echo "$EXT" >> approved.txt
             else
               # REJECT → BLACKLIST
+              echo "$EXT"
               grep -qxF "$EXT" blacklist.txt || echo "$EXT" >> blacklist.txt
             fi
           done
