@@ -1,0 +1,90 @@
+name: Generate Review Menu
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate dynamic review workflow
+        run: |
+          echo "Generating review.yml from pending.txt..."
+
+          # Start workflow file
+          cat << 'EOF' > .github/workflows/review.yml
+name: Review Pending Extensions
+
+on:
+  workflow_dispatch:
+    inputs:
+      blacklist:
+        description: "Select extensions to BLACKLIST (others will be APPROVED)"
+        required: false
+        type: choice
+        options:
+EOF
+
+          # Add dynamic options
+          while read EXT; do
+            echo "          - \"$EXT\"" >> .github/workflows/review.yml
+          done < pending.txt
+
+          # Add job logic
+          cat << 'EOF' >> .github/workflows/review.yml
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Process selections
+        run: |
+          SELECTED="${{ github.event.inputs.blacklist }}"
+          touch approved.txt blacklist.txt
+
+          mapfile -t PENDING < pending.txt
+
+          for EXT in "${PENDING[@]}"; do
+            if [ "$EXT" = "$SELECTED" ]; then
+              echo "$EXT" >> blacklist.txt
+            else
+              echo "$EXT" >> approved.txt
+            fi
+          done
+
+          > pending.txt
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add approved.txt blacklist.txt pending.txt
+          git commit -m "Reviewed pending extensions" || echo "No changes"
+
+      - name: Push changes
+        run: |
+          git push origin repo
+
+EOF
+
+      - name: Commit workflow update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/review.yml
+          git commit -m "Updated review.yml with dynamic pending list" || echo "No changes"
+          git push origin repo
