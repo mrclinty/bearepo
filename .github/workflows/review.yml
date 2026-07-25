@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       blacklist:
-        description: "Space-separated list of extensions to BLACKLIST (others will be APPROVED)"
+        description: "Enter extensions to BLACKLIST, one per line"
         required: false
         type: string
 
@@ -33,32 +33,40 @@ jobs:
 
       - name: Process selections
         run: |
-          touch approved.txt blacklist.txt
+          touch approved.txt blacklist.txt pending.txt
 
-          # Split input by SPACES instead of commas
-          IFS=' ' read -ra BLACKLIST <<< "${{ github.event.inputs.blacklist }}"
-
-          # Normalize whitespace
-          CLEAN_BL=()
-          for item in "${BLACKLIST[@]}"; do
-            CLEAN_BL+=("$(echo "$item" | xargs)")
-          done
-
-          # Load pending list
-          mapfile -t PENDING < pending.txt
+          # Split input by NEWLINES instead of spaces
+          printf "%s" "${{ github.event.inputs.blacklist }}" | sed '/^$/d' > bl_input.txt
+          mapfile -t CLEAN_BL < bl_input.txt
 
           echo "Blacklisting:"
           printf '%s\n' "${CLEAN_BL[@]}"
 
-          echo "Approving:"
+          # Load pending and approved lists
+          mapfile -t PENDING < pending.txt
+          mapfile -t APPROVED < approved.txt
+
+          # 1. Process pending items
+          > approved.new
           for EXT in "${PENDING[@]}"; do
             if printf '%s\n' "${CLEAN_BL[@]}" | grep -qxF "$EXT"; then
               echo "$EXT" >> blacklist.txt
             else
-              echo "$EXT" >> approved.txt
-              echo "$EXT"
+              echo "$EXT" >> approved.new
             fi
           done
+
+          # 2. Process approved items
+          > approved.final
+          for EXT in "${APPROVED[@]}"; do
+            if printf '%s\n' "${CLEAN_BL[@]}" | grep -qxF "$EXT"; then
+              echo "$EXT" >> blacklist.txt
+            else
+              echo "$EXT" >> approved.final
+            fi
+          done
+
+          mv approved.final approved.txt
 
           # Clear pending
           > pending.txt
