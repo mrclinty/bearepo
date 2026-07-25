@@ -8,7 +8,7 @@ with open("index.json", "r", encoding="utf-8") as f:
 with open("blacklist.txt", "r", encoding="utf-8") as f:
     blacklist = {line.strip() for line in f if line.strip()}
 
-# Filter extensions
+# Filter extensions by "name"
 extensions = data["extensionList"]["extensions"]
 filtered = [
     ext for ext in extensions
