@@ -51,26 +51,27 @@ jobs:
           mapfile -t APPROVED < approved.txt
 
           # 1. Process pending items
-          > approved.new
+          > approved.pending
           for EXT in "${PENDING[@]}"; do
             if printf '%s\n' "${CLEAN_BL[@]}" | grep -qxF "$EXT"; then
               echo "$EXT" >> blacklist.txt
             else
-              echo "$EXT" >> approved.new
+              echo "$EXT" >> approved.pending
             fi
           done
 
           # 2. Process approved items
-          > approved.final
+          > approved.existing
           for EXT in "${APPROVED[@]}"; do
             if printf '%s\n' "${CLEAN_BL[@]}" | grep -qxF "$EXT"; then
               echo "$EXT" >> blacklist.txt
             else
-              echo "$EXT" >> approved.final
+              echo "$EXT" >> approved.existing
             fi
           done
 
-          mv approved.final approved.txt
+          # 3. Combine both approved lists
+          cat approved.pending approved.existing > approved.txt
 
           # Clear pending
           > pending.txt
@@ -85,4 +86,3 @@ jobs:
       - name: Push changes
         run: |
           git push origin repo
-
