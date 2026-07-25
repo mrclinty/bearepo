@@ -36,24 +36,24 @@ jobs:
       - name: Filter index.json (English + Multi only)
         run: |
           jq '
-            .extensionList.extensions |= (
-              .extensionList.extensions
-              | map(
-                  select(
-                    (
-                      .sources[]
-                      | .language
-                      | tostring
-                      | ascii_downcase
-                    ) as $lang
-                    | $lang == "en"
-                    or $lang == "english"
-                    or $lang == "multi"
-                    or $lang == "all"
-                    or ($lang | startswith("en-"))
+            .extensionList.extensions =
+              (
+                .extensionList.extensions
+                | map(
+                    select(
+                      (
+                        .sources[]
+                        | .language
+                        | ascii_downcase
+                      ) as $lang
+                      | $lang == "en"
+                      or $lang == "english"
+                      or $lang == "multi"
+                      or $lang == "all"
+                      or ($lang | startswith("en-"))
+                    )
                   )
-                )
-            )
+              )
           ' index.json > index.json.new
           mv index.json.new index.json
 
@@ -65,7 +65,6 @@ jobs:
                 (
                   .sources[]
                   | .language
-                  | tostring
                   | ascii_downcase
                 ) as $lang
                 | $lang == "en"
@@ -86,7 +85,6 @@ jobs:
                 (
                   .sources[]
                   | .language
-                  | tostring
                   | ascii_downcase
                 ) as $lang
                 | $lang == "en"
