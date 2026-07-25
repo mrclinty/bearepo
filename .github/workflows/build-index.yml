@@ -4,39 +4,41 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "approved.txt"
+      - "repo/approved.txt"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout full repository
+      - name: Checkout repo branch
         uses: actions/checkout@v4
+        with:
+          ref: repo
 
       - name: Build index.json
         run: |
           echo "Building index.json..."
 
-          # Load approved list from repo root
-          mapfile -t APPROVED < approved.txt
+          # Load approved list
+          mapfile -t APPROVED < repo/approved.txt
 
           # Start index.json
-          echo '{' > index.json
-          echo '  "name": "Bearepo",' >> index.json
-          echo '  "badgeLabel": "BEAR",' >> index.json
-          echo '  "signingKey": "00000000000000000000000000000000",' >> index.json
-          echo '  "contact": {' >> index.json
-          echo '    "website": "https://github.com/mrclinty",' >> index.json
-          echo '    "discord": ""' >> index.json
-          echo '  },' >> index.json
-          echo '  "extensionList": {' >> index.json
-          echo '    "extensions": [' >> index.json
+          echo '{' > repo/index.json
+          echo '  "name": "Bearepo",' >> repo/index.json
+          echo '  "badgeLabel": "BEAR",' >> repo/index.json
+          echo '  "signingKey": "00000000000000000000000000000000",' >> repo/index.json
+          echo '  "contact": {' >> repo/index.json
+          echo '    "website": "https://github.com/mrclinty",' >> repo/index.json
+          echo '    "discord": ""' >> repo/index.json
+          echo '  },' >> repo/index.json
+          echo '  "extensionList": {' >> repo/index.json
+          echo '    "extensions": [' >> repo/index.json
 
           FIRST=true
 
           # Loop through all extension folders
-          for FOLDER in extensions/*; do
+          for FOLDER in repo/extensions/*; do
             MANIFEST="$FOLDER/manifest.json"
 
             if [ -f "$MANIFEST" ]; then
@@ -50,13 +52,12 @@ jobs:
                 JAR=$(jq -r '.apk' "$MANIFEST")
                 ICON="$PKG.png"
 
-                # Correct repo name: bearepo
                 APK_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/apk/$APK"
                 ICON_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/icon/$ICON"
                 JAR_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/jar/$JAR"
 
                 if [ "$FIRST" = false ]; then
-                  echo ',' >> index.json
+                  echo ',' >> repo/index.json
                 fi
                 FIRST=false
 
@@ -78,20 +79,20 @@ jobs:
                     versionName: $man.versionName,
                     contentWarning: $man.contentWarning,
                     sources: $man.sources
-                  }' >> index.json
+                  }' >> repo/index.json
               fi
             fi
           done
 
-          echo '    ]' >> index.json
-          echo '  }' >> index.json
-          echo '}' >> index.json
+          echo '    ]' >> repo/index.json
+          echo '  }' >> repo/index.json
+          echo '}' >> repo/index.json
 
       - name: Commit index.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.json
+          git add repo/index.json
           git commit -m "Updated index.json from approved list" || echo "No changes"
 
       - name: Pull latest changes
