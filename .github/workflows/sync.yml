@@ -1,4 +1,4 @@
-name: Sync Upstream (English + Multi Only)
+name: Sync Upstream (Filtered + Moderated)
 
 on:
   workflow_dispatch:
@@ -28,10 +28,9 @@ jobs:
         run: |
           git checkout upstream/repo -- index.json index.min.json index.pb repo.json
 
-      - name: Debug index.json format
+      - name: Load moderation lists
         run: |
-          echo "GitHub Actions is reading this index.json:"
-          head -n 30 index.json
+          touch approved.txt blacklist.txt pending.txt
 
       - name: Filter index.json (English + Multi only)
         run: |
@@ -57,7 +56,32 @@ jobs:
           ' index.json > index.json.new
           mv index.json.new index.json
 
-      - name: Regenerate index.min.json from filtered index.json
+      - name: Remove blacklisted extensions
+        run: |
+          jq --argfile bl blacklist.txt '
+            .extensionList.extensions =
+              (
+                .extensionList.extensions
+                | map(select(.name as $n | ($bl | index($n)) | not))
+              )
+          ' index.json > index.json.new
+          mv index.json.new index.json
+
+      - name: Update pending list
+        run: |
+          # Extract all extension names after filtering
+          jq -r '.extensionList.extensions[].name' index.json > current.txt
+
+          # Add new ones to pending
+          while read EXT; do
+            if ! grep -qxF "$EXT" approved.txt && \
+               ! grep -qxF "$EXT" blacklist.txt && \
+               ! grep -qxF "$EXT" pending.txt; then
+              echo "$EXT" >> pending.txt
+            fi
+          done < current.txt
+
+      - name: Regenerate index.min.json
         run: |
           jq '
             .extensionList.extensions
@@ -72,31 +96,12 @@ jobs:
               })
           ' index.json > index.min.json
 
-      - name: Generate extension-list.txt
-        run: |
-          jq -r '
-            .extensionList.extensions[]
-            | select(
-                (
-                  .sources[]
-                  | .language
-                  | ascii_downcase
-                ) as $lang
-                | $lang == "en"
-                or $lang == "english"
-                or $lang == "multi"
-                or $lang == "all"
-                or ($lang | startswith("en-"))
-            )
-            | .name
-          ' index.json | sort -u > extension-list.txt
-
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.json index.min.json extension-list.txt
-          git commit -m "Filtered: English + Multi only" || echo "No changes"
+          git add index.json index.min.json pending.txt
+          git commit -m "Sync + Filter + Moderation update" || echo "No changes"
 
       - name: Push changes
         run: |
