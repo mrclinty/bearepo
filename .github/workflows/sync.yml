@@ -23,16 +23,21 @@ jobs:
         run: |
           jq -r '.extensionList.extensions[].name' index.json > upstream_all.txt
 
-      - name: Extract English + All extensions
+      - name: Extract English + All + Multi extensions
         run: |
           jq -r '
             .extensionList.extensions[]
             | select(
                 (.lang | tostring | ascii_downcase) == "en" or
-                (.lang | tostring | ascii_downcase) == "all"
+                (.lang | tostring | ascii_downcase) == "all" or
+                (.lang | tostring | ascii_downcase) == "multi" or
+                (.lang | tostring | ascii_downcase) == "english" or
+                (.lang | tostring | ascii_downcase) == "" or
+                (.lang | tostring | ascii_downcase) == "null" or
+                (.lang | tostring | ascii_downcase | startswith("en-"))
               )
             | .name
-          ' index.json > upstream_en_all.txt
+          ' index.json > upstream_en_all_multi.txt
 
       - name: Extract unwanted languages
         run: |
@@ -40,7 +45,12 @@ jobs:
             .extensionList.extensions[]
             | select(
                 (.lang | tostring | ascii_downcase) != "en" and
-                (.lang | tostring | ascii_downcase) != "all"
+                (.lang | tostring | ascii_downcase) != "all" and
+                (.lang | tostring | ascii_downcase) != "multi" and
+                (.lang | tostring | ascii_downcase) != "english" and
+                (.lang | tostring | ascii_downcase) != "" and
+                (.lang | tostring | ascii_downcase) != "null" and
+                (.lang | tostring | ascii_downcase | startswith("en-")) == false
               )
             | .name
           ' index.json > upstream_unwanted.txt
@@ -52,9 +62,9 @@ jobs:
             sort -u blacklist.txt -o blacklist.txt
           fi
 
-      - name: Detect new English/All extensions (pending)
+      - name: Detect new English/All/Multi extensions (pending)
         run: |
-          comm -13 <(sort extension-list.txt) <(sort upstream_en_all.txt) > pending.txt
+          comm -13 <(sort extension-list.txt) <(sort upstream_en_all_multi.txt) > pending.txt
 
       - name: Fuzzy resolve blacklist entries
         run: |
