@@ -1,5 +1,4 @@
 import json
-import re
 
 # Load Mihon-style JSON
 with open("index.json", "r", encoding="utf-8") as f:
@@ -24,12 +23,11 @@ for ext in extensions:
     if name in blacklist:
         continue
 
-    # Extract APK filename from URL
+    # Extract APK filename
     apk_url = ext["resources"]["apkUrl"]
     apk_filename = apk_url.split("/")[-1]
 
     # Determine language
-    # If multiple languages exist, TaichiManga expects "all"
     langs = {s["language"] for s in sources}
     lang = "all" if len(langs) != 1 else next(iter(langs))
 
@@ -37,22 +35,28 @@ for ext in extensions:
     warning = ext.get("contentWarning", "")
     nsfw = 1 if "NSFW" in warning else 0
 
-    # Build legacy entry
+    # Extract baseUrl (required by TaichiManga)
+    if sources:
+        baseUrl = sources[0].get("homeUrl", "")
+    else:
+        baseUrl = ""
+
     legacy.append({
         "name": f"Bearepo: {name}",
         "pkg": pkg,
         "apk": apk_filename,
         "lang": lang,
+        "baseUrl": baseUrl,
         "code": code,
         "version": version,
         "nsfw": nsfw,
         "sources": sources
     })
 
-# Write legacy index.json (pretty)
+# Write legacy index.json
 with open("index.json", "w", encoding="utf-8") as f:
     json.dump(legacy, f, indent=2)
 
-# Write legacy index.min.json (minified)
+# Write legacy index.min.json
 with open("index.min.json", "w", encoding="utf-8") as f:
     json.dump(legacy, f, separators=(",", ":"))
