@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repo branch
         uses: actions/checkout@v4
         with:
+          ref: repo
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add upstream remote
@@ -23,28 +24,36 @@ jobs:
         run: |
           git fetch upstream
 
-      - name: Merge upstream into repo
+      - name: Pull upstream index files
         run: |
-          git merge upstream/main --allow-unrelated-histories -X theirs || true
+          git checkout upstream/repo -- index.json index.min.json index.pb repo.json
+
+      - name: Debug index.json format
+        run: |
+          echo "GitHub Actions is reading this index.json:"
+          head -n 30 index.json
 
       - name: Filter index.json (English + Multi only)
         run: |
           jq '
-            .extensionList.extensions |=
-              (
-                .extensionList.extensions
-                | map(
-                    select(
-                      (.lang | tostring | ascii_downcase) == "en" or
-                      (.lang | tostring | ascii_downcase) == "english" or
-                      (.lang | tostring | ascii_downcase) == "multi" or
-                      (.lang | tostring | ascii_downcase) == "all" or
-                      (.lang | tostring | ascii_downcase) == "" or
-                      (.lang | tostring | ascii_downcase) == "null" or
-                      (.lang | tostring | ascii_downcase | startswith("en-"))
-                    )
+            .extensionList.extensions |= (
+              .extensionList.extensions
+              | map(
+                  select(
+                    (
+                      .sources[]
+                      | .language
+                      | tostring
+                      | ascii_downcase
+                    ) as $lang
+                    | $lang == "en"
+                    or $lang == "english"
+                    or $lang == "multi"
+                    or $lang == "all"
+                    or ($lang | startswith("en-"))
                   )
-              )
+                )
+            )
           ' index.json > index.json.new
           mv index.json.new index.json
 
@@ -53,13 +62,17 @@ jobs:
           jq '
             map(
               select(
-                (.lang | tostring | ascii_downcase) == "en" or
-                (.lang | tostring | ascii_downcase) == "english" or
-                (.lang | tostring | ascii_downcase) == "multi" or
-                (.lang | tostring | ascii_downcase) == "all" or
-                (.lang | tostring | ascii_downcase) == "" or
-                (.lang | tostring | ascii_downcase) == "null" or
-                (.lang | tostring | ascii_downcase | startswith("en-"))
+                (
+                  .sources[]
+                  | .language
+                  | tostring
+                  | ascii_downcase
+                ) as $lang
+                | $lang == "en"
+                or $lang == "english"
+                or $lang == "multi"
+                or $lang == "all"
+                or ($lang | startswith("en-"))
               )
             )
           ' index.min.json > index.min.json.new
@@ -70,13 +83,17 @@ jobs:
           jq -r '
             .extensionList.extensions[]
             | select(
-                (.lang | tostring | ascii_downcase) == "en" or
-                (.lang | tostring | ascii_downcase) == "english" or
-                (.lang | tostring | ascii_downcase) == "multi" or
-                (.lang | tostring | ascii_downcase) == "all" or
-                (.lang | tostring | ascii_downcase) == "" or
-                (.lang | tostring | ascii_downcase) == "null" or
-                (.lang | tostring | ascii_downcase | startswith("en-"))
+                (
+                  .sources[]
+                  | .language
+                  | tostring
+                  | ascii_downcase
+                ) as $lang
+                | $lang == "en"
+                or $lang == "english"
+                or $lang == "multi"
+                or $lang == "all"
+                or ($lang | startswith("en-"))
             )
             | .name
           ' index.json | sort -u > extension-list.txt
