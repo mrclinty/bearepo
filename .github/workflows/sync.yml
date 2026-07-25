@@ -15,9 +15,17 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull latest upstream changes
+      - name: Add upstream remote
         run: |
-          git pull origin repo
+          git remote add upstream https://github.com/keiyoushi/extensions.git || true
+
+      - name: Fetch upstream
+        run: |
+          git fetch upstream
+
+      - name: Merge upstream into repo
+        run: |
+          git merge upstream/repo --allow-unrelated-histories -X theirs || true
 
       - name: Extract upstream extension names
         run: |
