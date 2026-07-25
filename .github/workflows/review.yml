@@ -3,9 +3,9 @@ name: Review Pending Extensions
 on:
   workflow_dispatch:
     inputs:
-      approve_list:
-        description: "Comma-separated list of extensions to APPROVE (others will be BLACKLISTED)"
-        required: true
+      blacklist:
+        description: "Comma-separated list of extensions to BLACKLIST (others will be APPROVED)"
+        required: false
         type: string
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
           ref: repo
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Show pending extensions
+      - name: Show pending list
         run: |
           echo "====================================="
           echo "           PENDING EXTENSIONS"
@@ -31,39 +31,36 @@ jobs:
           fi
           echo "====================================="
 
-      - name: Process approvals and rejections
+      - name: Process selections
         run: |
-          # Convert input into array
-          IFS=',' read -ra APPROVE <<< "${{ github.event.inputs.approve_list }}"
+          touch approved.txt blacklist.txt
+
+          # Convert input to array
+          IFS=',' read -ra BLACKLIST <<< "${{ github.event.inputs.blacklist }}"
 
           # Normalize whitespace
-          APPROVE_CLEAN=()
-          for item in "${APPROVE[@]}"; do
-            APPROVE_CLEAN+=("$(echo "$item" | xargs)")
+          CLEAN_BL=()
+          for item in "${BLACKLIST[@]}"; do
+            CLEAN_BL+=("$(echo "$item" | xargs)")
           done
 
           # Load pending list
           mapfile -t PENDING < pending.txt
 
-          # Ensure moderation files exist
-          touch approved.txt blacklist.txt
+          echo "Blacklisting:"
+          printf '%s\n' "${CLEAN_BL[@]}"
 
           echo "Approving:"
-          printf '%s\n' "${APPROVE_CLEAN[@]}"
-
-          echo "Blacklisting:"
           for EXT in "${PENDING[@]}"; do
-            if printf '%s\n' "${APPROVE_CLEAN[@]}" | grep -qxF "$EXT"; then
-              # APPROVE
-              grep -qxF "$EXT" approved.txt || echo "$EXT" >> approved.txt
+            if printf '%s\n' "${CLEAN_BL[@]}" | grep -qxF "$EXT"; then
+              echo "$EXT" >> blacklist.txt
             else
-              # REJECT → BLACKLIST
+              echo "$EXT" >> approved.txt
               echo "$EXT"
-              grep -qxF "$EXT" blacklist.txt || echo "$EXT" >> blacklist.txt
             fi
           done
 
-          # Clear pending list
+          # Clear pending
           > pending.txt
 
       - name: Commit changes
