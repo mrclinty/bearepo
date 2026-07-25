@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "repo/approved.txt"
+      - "approved.txt"
 
 jobs:
   build:
@@ -21,25 +21,25 @@ jobs:
         run: |
           echo "Building index.json..."
 
-          # Load approved list
-          mapfile -t APPROVED < repo/approved.txt
+          # Load approved list from repo root
+          mapfile -t APPROVED < approved.txt
 
           # Start index.json
-          echo '{' > repo/index.json
-          echo '  "name": "BearRepo",' >> repo/index.json
-          echo '  "badgeLabel": "BEAR",' >> repo/index.json
-          echo '  "signingKey": "00000000000000000000000000000000",' >> repo/index.json
-          echo '  "contact": {' >> repo/index.json
-          echo '    "website": "https://github.com/mrclinty",' >> repo/index.json
-          echo '    "discord": ""' >> repo/index.json
-          echo '  },' >> repo/index.json
-          echo '  "extensionList": {' >> repo/index.json
-          echo '    "extensions": [' >> repo/index.json
+          echo '{' > index.json
+          echo '  "name": "BearRepo",' >> index.json
+          echo '  "badgeLabel": "BEAR",' >> index.json
+          echo '  "signingKey": "00000000000000000000000000000000",' >> index.json
+          echo '  "contact": {' >> index.json
+          echo '    "website": "https://github.com/mrclinty",' >> index.json
+          echo '    "discord": ""' >> index.json
+          echo '  },' >> index.json
+          echo '  "extensionList": {' >> index.json
+          echo '    "extensions": [' >> index.json
 
           FIRST=true
 
           # Loop through all extension folders
-          for FOLDER in repo/extensions/*; do
+          for FOLDER in extensions/*; do
             MANIFEST="$FOLDER/manifest.json"
 
             if [ -f "$MANIFEST" ]; then
@@ -58,7 +58,7 @@ jobs:
                 JAR_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/jar/$JAR"
 
                 if [ "$FIRST" = false ]; then
-                  echo ',' >> repo/index.json
+                  echo ',' >> index.json
                 fi
                 FIRST=false
 
@@ -80,20 +80,20 @@ jobs:
                     versionName: $man.versionName,
                     contentWarning: $man.contentWarning,
                     sources: $man.sources
-                  }' >> repo/index.json
+                  }' >> index.json
               fi
             fi
           done
 
-          echo '    ]' >> repo/index.json
-          echo '  }' >> repo/index.json
-          echo '}' >> repo/index.json
+          echo '    ]' >> index.json
+          echo '  }' >> index.json
+          echo '}' >> index.json
 
       - name: Commit index.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add repo/index.json
+          git add index.json
           git commit -m "Updated index.json from approved list" || echo "No changes"
 
       - name: Pull latest changes
