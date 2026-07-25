@@ -1,4 +1,4 @@
-name: Sync Upstream + Moderation Queue
+name: Sync Upstream (English + Multi Only)
 
 on:
   workflow_dispatch:
@@ -25,104 +25,68 @@ jobs:
 
       - name: Merge upstream into repo
         run: |
-          git merge upstream/repo --allow-unrelated-histories -X theirs || true
+          git merge upstream/main --allow-unrelated-histories -X theirs || true
 
-      - name: Extract upstream extension names
+      - name: Filter index.json (English + Multi only)
         run: |
-          jq -r '.extensionList.extensions[].name' index.json > upstream_all.txt
+          jq '
+            .extensionList.extensions |=
+              (
+                .extensionList.extensions
+                | map(
+                    select(
+                      (.lang | tostring | ascii_downcase) == "en" or
+                      (.lang | tostring | ascii_downcase) == "english" or
+                      (.lang | tostring | ascii_downcase) == "multi" or
+                      (.lang | tostring | ascii_downcase) == "all" or
+                      (.lang | tostring | ascii_downcase) == "" or
+                      (.lang | tostring | ascii_downcase) == "null" or
+                      (.lang | tostring | ascii_downcase | startswith("en-"))
+                    )
+                  )
+              )
+          ' index.json > index.json.new
+          mv index.json.new index.json
 
-      - name: Extract English + All + Multi extensions
+      - name: Filter index.min.json (English + Multi only)
+        run: |
+          jq '
+            map(
+              select(
+                (.lang | tostring | ascii_downcase) == "en" or
+                (.lang | tostring | ascii_downcase) == "english" or
+                (.lang | tostring | ascii_downcase) == "multi" or
+                (.lang | tostring | ascii_downcase) == "all" or
+                (.lang | tostring | ascii_downcase) == "" or
+                (.lang | tostring | ascii_downcase) == "null" or
+                (.lang | tostring | ascii_downcase | startswith("en-"))
+              )
+            )
+          ' index.min.json > index.min.json.new
+          mv index.min.json.new index.min.json
+
+      - name: Update extension-list.txt
         run: |
           jq -r '
             .extensionList.extensions[]
             | select(
                 (.lang | tostring | ascii_downcase) == "en" or
-                (.lang | tostring | ascii_downcase) == "all" or
-                (.lang | tostring | ascii_downcase) == "multi" or
                 (.lang | tostring | ascii_downcase) == "english" or
+                (.lang | tostring | ascii_downcase) == "multi" or
+                (.lang | tostring | ascii_downcase) == "all" or
                 (.lang | tostring | ascii_downcase) == "" or
                 (.lang | tostring | ascii_downcase) == "null" or
                 (.lang | tostring | ascii_downcase | startswith("en-"))
-              )
+            )
             | .name
-          ' index.json > upstream_en_all_multi.txt
-
-      - name: Extract unwanted languages
-        run: |
-          jq -r '
-            .extensionList.extensions[]
-            | select(
-                (.lang | tostring | ascii_downcase) != "en" and
-                (.lang | tostring | ascii_downcase) != "all" and
-                (.lang | tostring | ascii_downcase) != "multi" and
-                (.lang | tostring | ascii_downcase) != "english" and
-                (.lang | tostring | ascii_downcase) != "" and
-                (.lang | tostring | ascii_downcase) != "null" and
-                (.lang | tostring | ascii_downcase | startswith("en-")) == false
-              )
-            | .name
-          ' index.json > upstream_unwanted.txt
-
-      - name: Add unwanted languages to blacklist
-        run: |
-          if [ -s upstream_unwanted.txt ]; then
-            cat upstream_unwanted.txt >> blacklist.txt
-            sort -u blacklist.txt -o blacklist.txt
-          fi
-
-      - name: Detect new English/All/Multi extensions (pending)
-        run: |
-          comm -13 <(sort extension-list.txt) <(sort upstream_en_all_multi.txt) > pending.txt
-
-      - name: Fuzzy resolve blacklist entries
-        run: |
-          rm -f resolved-blacklist.txt
-          touch resolved-blacklist.txt
-
-          while IFS= read -r INPUT; do
-            MATCH=$(grep -i "$INPUT" extension-list.txt | head -n 1)
-            if [ -n "$MATCH" ]; then
-              echo "$MATCH" >> resolved-blacklist.txt
-            fi
-          done < blacklist.txt
-
-      - name: Enforce blacklist in index.json
-        run: |
-          cp index.json index.json.tmp
-          while IFS= read -r NAME; do
-            jq --arg NAME "$NAME" '
-              .extensionList.extensions |= map(select(.name != $NAME))
-            ' index.json.tmp > index.json.new
-            mv index.json.new index.json.tmp
-          done < resolved-blacklist.txt
-          mv index.json.tmp index.json
-
-      - name: Enforce blacklist in index.min.json
-        run: |
-          cp index.min.json index.min.json.tmp
-          while IFS= read -r NAME; do
-            jq --arg NAME "$NAME" '
-              map(select(.name != $NAME))
-            ' index.min.json.tmp > index.min.json.new
-            mv index.min.json.new index.min.json.tmp
-          done < resolved-blacklist.txt
-          mv index.min.json.tmp index.min.json
-
-      - name: Enforce blacklist in extension-list.txt
-        run: |
-          cp extension-list.txt extension-list.tmp
-          while IFS= read -r NAME; do
-            grep -i -v "$NAME" extension-list.tmp > extension-list.new
-            mv extension-list.new extension-list.tmp
-          done < resolved-blacklist.txt
-          mv extension-list.tmp extension-list.txt
+          ' index.json | sort -u > extension-list.txt
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.json index.min.json extension-list.txt pending.txt blacklist.txt
-          git commit -m "Sync + Moderation Queue + Blacklist Enforcement" || echo "No changes"
+          git add index.json index.min.json extension-list.txt
+          git commit -m "Filtered: English + Multi only" || echo "No changes"
 
       - name: Push changes
         run: |
