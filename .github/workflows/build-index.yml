@@ -50,7 +50,7 @@ jobs:
                 JAR=$(jq -r '.apk' "$MANIFEST")
                 ICON="$PKG.png"
 
-                # FIXED: correct repo name (bearepo)
+                # Correct repo name: bearepo
                 APK_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/apk/$APK"
                 ICON_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/icon/$ICON"
                 JAR_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/jar/$JAR"
