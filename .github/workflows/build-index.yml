@@ -21,10 +21,8 @@ jobs:
         run: |
           echo "Building index.json..."
 
-          # Load approved list
           mapfile -t APPROVED < approved.txt
 
-          # Start JSON
           echo '{' > index.json
           echo '  "name": "BearRepo",' >> index.json
           echo '  "badgeLabel": "BEAR",' >> index.json
@@ -38,47 +36,50 @@ jobs:
 
           FIRST=true
 
-          for EXT in "${APPROVED[@]}"; do
-            MANIFEST="extensions/$EXT/manifest.json"
+          # Loop through all extension folders
+          for FOLDER in extensions/*; do
+            MANIFEST="$FOLDER/manifest.json"
 
             if [ -f "$MANIFEST" ]; then
-              if [ "$FIRST" = false ]; then
-                echo ',' >> index.json
+              NAME=$(jq -r '.name' "$MANIFEST")
+
+              # Only include approved extensions
+              if printf '%s\n' "${APPROVED[@]}" | grep -qxF "$NAME"; then
+
+                PKG=$(jq -r '.pkg' "$MANIFEST")
+                APK=$(jq -r '.apk' "$MANIFEST")
+                JAR=$(jq -r '.apk' "$MANIFEST")
+                ICON="$PKG.png"
+
+                APK_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/apk/$APK"
+                ICON_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/icon/$ICON"
+                JAR_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/jar/$JAR"
+
+                if [ "$FIRST" = false ]; then
+                  echo ',' >> index.json
+                fi
+                FIRST=false
+
+                jq -n \
+                  --argjson man "$(cat "$MANIFEST")" \
+                  --arg apkUrl "$APK_URL" \
+                  --arg iconUrl "$ICON_URL" \
+                  --arg jarUrl "$JAR_URL" \
+                  '{
+                    name: $man.name,
+                    packageName: $man.pkg,
+                    resources: {
+                      apkUrl: $apkUrl,
+                      iconUrl: $iconUrl,
+                      jarUrl: $jarUrl
+                    },
+                    extensionLib: $man.extensionLib,
+                    versionCode: ($man.version | tostring),
+                    versionName: $man.versionName,
+                    contentWarning: $man.contentWarning,
+                    sources: $man.sources
+                  }' >> index.json
               fi
-              FIRST=false
-
-              # Read manifest.json
-              MAN=$(cat "$MANIFEST")
-
-              # Build resource URLs
-              APK=$(jq -r '.apk' <<< "$MAN")
-              ICON=$(jq -r '.pkg' <<< "$MAN")
-              JAR=$(jq -r '.apk' <<< "$MAN")
-
-              APK_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/apk/$APK"
-              ICON_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/icon/$ICON.png"
-              JAR_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/jar/$JAR"
-
-              # Insert into index.json
-              jq -n \
-                --argjson man "$MAN" \
-                --arg apkUrl "$APK_URL" \
-                --arg iconUrl "$ICON_URL" \
-                --arg jarUrl "$JAR_URL" \
-                '{
-                  name: $man.name,
-                  packageName: $man.pkg,
-                  resources: {
-                    apkUrl: $apkUrl,
-                    iconUrl: $iconUrl,
-                    jarUrl: $jarUrl
-                  },
-                  extensionLib: $man.extensionLib,
-                  versionCode: ($man.version | tostring),
-                  versionName: $man.versionName,
-                  contentWarning: $man.contentWarning,
-                  sources: $man.sources
-                }' >> index.json
             fi
           done
 
