@@ -23,7 +23,7 @@ jobs:
 
           # Start index.json
           echo '{' > index.json
-          echo '  "name": "BearRepo",' >> index.json
+          echo '  "name": "Bearepo",' >> index.json
           echo '  "badgeLabel": "BEAR",' >> index.json
           echo '  "signingKey": "00000000000000000000000000000000",' >> index.json
           echo '  "contact": {' >> index.json
