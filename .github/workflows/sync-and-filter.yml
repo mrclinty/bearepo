@@ -1,0 +1,44 @@
+name: Sync and Filter Index
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo branch
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+
+      - name: Download upstream index.json
+        run: |
+          curl -L \
+            -o index.json \
+            https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json
+
+      - name: Download upstream index.min.json
+        run: |
+          curl -L \
+            -o index.min.json \
+            https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
+
+      - name: Install Python
+        run: sudo apt-get install -y python3
+
+      - name: Filter blacklist
+        run: python3 scripts/filter-index.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.json index.min.json
+          git commit -m "Sync + filtered index.json" || echo "No changes"
+
+      - name: Push changes
+        run: git push origin repo
