@@ -28,7 +28,7 @@ jobs:
         run: |
           git checkout upstream/repo -- index.json index.min.json index.pb repo.json
 
-      - name: Load moderation lists
+      - name: Ensure moderation lists exist
         run: |
           touch approved.txt blacklist.txt pending.txt
 
@@ -58,13 +58,21 @@ jobs:
 
       - name: Remove blacklisted extensions
         run: |
-          jq --argfile bl blacklist.txt '
+          # Load blacklist into bash array
+          mapfile -t BL < blacklist.txt
+
+          # Convert bash array → JSON array
+          BL_JSON=$(printf '%s\n' "${BL[@]}" | jq -R . | jq -s .)
+
+          # Filter out blacklisted extensions
+          jq --argjson bl "$BL_JSON" '
             .extensionList.extensions =
               (
                 .extensionList.extensions
                 | map(select(.name as $n | ($bl | index($n)) | not))
               )
           ' index.json > index.json.new
+
           mv index.json.new index.json
 
       - name: Update pending list
