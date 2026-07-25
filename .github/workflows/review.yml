@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       blacklist:
-        description: "Enter extensions to BLACKLIST, one per line"
+        description: "Semicolon-separated list of extensions to BLACKLIST"
         required: false
         type: string
 
@@ -35,9 +35,13 @@ jobs:
         run: |
           touch approved.txt blacklist.txt pending.txt
 
-          # Split input by NEWLINES instead of spaces
-          printf "%s" "${{ github.event.inputs.blacklist }}" | sed '/^$/d' > bl_input.txt
-          mapfile -t CLEAN_BL < bl_input.txt
+          # Split input by semicolons
+          IFS=';' read -ra CLEAN_BL <<< "${{ github.event.inputs.blacklist }}"
+
+          # Trim whitespace
+          for i in "${!CLEAN_BL[@]}"; do
+            CLEAN_BL[$i]="$(echo "${CLEAN_BL[$i]}" | xargs)"
+          done
 
           echo "Blacklisting:"
           printf '%s\n' "${CLEAN_BL[@]}"
@@ -81,3 +85,4 @@ jobs:
       - name: Push changes
         run: |
           git push origin repo
+
