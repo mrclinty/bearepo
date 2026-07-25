@@ -1,0 +1,95 @@
+name: Build Extension Index
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "approved.txt"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build index.json
+        run: |
+          echo "Building index.json..."
+
+          # Load approved list
+          mapfile -t APPROVED < approved.txt
+
+          # Start JSON
+          echo '{' > index.json
+          echo '  "name": "BearRepo",' >> index.json
+          echo '  "badgeLabel": "BEAR",' >> index.json
+          echo '  "signingKey": "00000000000000000000000000000000",' >> index.json
+          echo '  "contact": {' >> index.json
+          echo '    "website": "https://github.com/mrclinty",' >> index.json
+          echo '    "discord": ""' >> index.json
+          echo '  },' >> index.json
+          echo '  "extensionList": {' >> index.json
+          echo '    "extensions": [' >> index.json
+
+          FIRST=true
+
+          for EXT in "${APPROVED[@]}"; do
+            MANIFEST="extensions/$EXT/manifest.json"
+
+            if [ -f "$MANIFEST" ]; then
+              if [ "$FIRST" = false ]; then
+                echo ',' >> index.json
+              fi
+              FIRST=false
+
+              # Read manifest.json
+              MAN=$(cat "$MANIFEST")
+
+              # Build resource URLs
+              APK=$(jq -r '.apk' <<< "$MAN")
+              ICON=$(jq -r '.pkg' <<< "$MAN")
+              JAR=$(jq -r '.apk' <<< "$MAN")
+
+              APK_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/apk/$APK"
+              ICON_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/icon/$ICON.png"
+              JAR_URL="https://raw.githubusercontent.com/mrclinty/bearepo/repo/jar/$JAR"
+
+              # Insert into index.json
+              jq -n \
+                --argjson man "$MAN" \
+                --arg apkUrl "$APK_URL" \
+                --arg iconUrl "$ICON_URL" \
+                --arg jarUrl "$JAR_URL" \
+                '{
+                  name: $man.name,
+                  packageName: $man.pkg,
+                  resources: {
+                    apkUrl: $apkUrl,
+                    iconUrl: $iconUrl,
+                    jarUrl: $jarUrl
+                  },
+                  extensionLib: $man.extensionLib,
+                  versionCode: ($man.version | tostring),
+                  versionName: $man.versionName,
+                  contentWarning: $man.contentWarning,
+                  sources: $man.sources
+                }' >> index.json
+            fi
+          done
+
+          echo '    ]' >> index.json
+          echo '  }' >> index.json
+          echo '}' >> index.json
+
+      - name: Commit index.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.json
+          git commit -m "Updated index.json from approved list" || echo "No changes"
+          git push origin repo
