@@ -65,7 +65,7 @@ jobs:
           ' index.min.json > index.min.json.new
           mv index.min.json.new index.min.json
 
-      - name: Update extension-list.txt
+      - name: Generate extension-list.txt
         run: |
           jq -r '
             .extensionList.extensions[]
