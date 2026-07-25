@@ -57,25 +57,20 @@ jobs:
           ' index.json > index.json.new
           mv index.json.new index.json
 
-      - name: Filter index.min.json (English + Multi only)
+      - name: Regenerate index.min.json from filtered index.json
         run: |
           jq '
-            map(
-              select(
-                (
-                  .sources[]
-                  | .language
-                  | ascii_downcase
-                ) as $lang
-                | $lang == "en"
-                or $lang == "english"
-                or $lang == "multi"
-                or $lang == "all"
-                or ($lang | startswith("en-"))
-              )
-            )
-          ' index.min.json > index.min.json.new
-          mv index.min.json.new index.min.json
+            .extensionList.extensions
+            | map({
+                name,
+                packageName,
+                versionName,
+                versionCode,
+                extensionLib,
+                contentWarning,
+                sources
+              })
+          ' index.json > index.min.json
 
       - name: Generate extension-list.txt
         run: |
