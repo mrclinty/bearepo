@@ -1,0 +1,68 @@
+name: Review Pending Extensions
+
+on:
+  workflow_dispatch:
+    inputs:
+      approve_list:
+        description: "Comma-separated list of extensions to approve"
+        required: true
+        type: string
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show pending extensions
+        run: |
+          echo "Pending extensions:"
+          echo "-------------------"
+          cat pending.txt || echo "(none)"
+
+      - name: Process approvals and rejections
+        run: |
+          # Convert input into array
+          IFS=',' read -ra APPROVE <<< "${{ github.event.inputs.approve_list }}"
+
+          # Normalize whitespace
+          APPROVE_CLEAN=()
+          for item in "${APPROVE[@]}"; do
+            APPROVE_CLEAN+=("$(echo "$item" | xargs)")
+          done
+
+          # Load pending list
+          mapfile -t PENDING < pending.txt
+
+          # Ensure moderation files exist
+          touch approved.txt blacklist.txt
+
+          # Process each pending extension
+          for EXT in "${PENDING[@]}"; do
+            if printf '%s\n' "${APPROVE_CLEAN[@]}" | grep -qxF "$EXT"; then
+              # APPROVE
+              grep -qxF "$EXT" approved.txt || echo "$EXT" >> approved.txt
+            else
+              # REJECT → BLACKLIST
+              grep -qxF "$EXT" blacklist.txt || echo "$EXT" >> blacklist.txt
+            fi
+          done
+
+          # Clear pending list
+          > pending.txt
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add approved.txt blacklist.txt pending.txt
+          git commit -m "Reviewed pending extensions" || echo "No changes"
+
+      - name: Push changes
+        run: |
+          git push origin repo
