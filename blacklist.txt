@@ -43,6 +43,7 @@ CManhua
 Cocomic
 Coffee Manga
 Collected Curios
+Comic Asura
 Comic CX
 Comic Fury
 Comic Growl
@@ -50,8 +51,10 @@ Comic Valley
 ComicLand
 Comics Land
 Comics Valley
+Comikey
 Commit Strip
 Coomer
+Coolmic
 CosplayTele
 Crow Scans
 Cubari
@@ -101,6 +104,7 @@ GakaMangas
 Galaxy Manga
 GEDE Comix
 Gensura
+Genz Toons
 GingeRTooN
 GirlsTop
 Gone with the Blastwave
@@ -161,6 +165,7 @@ JJCOS
 J-Novel
 Joymii Hub
 Junmeitu
+K Manga
 Kaizen Scan
 KaliScan
 Kappa Beast
@@ -205,7 +210,9 @@ Manga Dass
 Manga District
 Manga Draft
 Manga Drama
+Manga Mirai
 Manga Kiss
+MangaLix
 MANGA Plus by SHUEISHA
 MANGA Plus Creators by SHUEISHA
 Manga Trend
@@ -227,9 +234,14 @@ MangaGo.fun
 Mangaforfree.com
 MangaForFree.net
 MangaHe
-Mangaka
+MangaKa
+Mangaka.cc
 Mangakakalot
+MangaManiacs
 Manganato
+MangaNow
+MangaOwl.io (unoriginal)
+MangaPill
 MangaReader.in
 Mangasushi
 Mangatellers
@@ -305,6 +317,7 @@ NineHentai
 Ninekon
 NixManga
 NovelCrow
+NovelCool
 Noxen Scans
 Nuvia Toon
 Nux Scans
@@ -374,6 +387,7 @@ Rinko Comics
 RitharScans
 Rizz Comic (unoriginal)
 RokariComicsvy
+RokariComics
 RokuHentai
 Rose Squad Scans
 Ryumanga
@@ -434,12 +448,13 @@ Vinne Veritas - CCC
 Violet Scans
 VIZ
 Vortex Scans
-Voyce.me
+VoyceMe
 VyvyManga
 VyvyManga.org
 War For Rayuba
 Webcomics
 Webdex Scans
+WebNovel
 Webtoons.com
 WebtoonScan
 WebtoonXYZ
@@ -469,3 +484,6 @@ YellowNote
 Yorai
 YSK Comics
 Zinmanga.net
+KokoMangas
+MangaKa
+BookWalker
