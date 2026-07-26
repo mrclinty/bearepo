@@ -1,6 +1,7 @@
 Comick (Unoriginal)
 ComicsKingdom
 Comikey
+GlobalComix
 Kagane
 Manga Ball
 MangaDex
@@ -13,7 +14,6 @@ Armageddon
 Atsumaru
 Omoi
 BatCave
-Bbato
 BookWalker
 Comic Asura
 ComicHubFree
@@ -25,43 +25,53 @@ Digital Comic Museum
 Flame Comics
 GalaxyDegenScans
 Goda
-Hiperdex
 K Manga
 Kun Manga Online
+MangaYY
 Mangabat
 MangaBlaze
 MangaK
+Manga Demon
 Mangadotnet
 MangaFox
 MangaFox.fun
 Mangafreak
 Mangafree
 MangaGG
-MangaGo.fun
-MangaHe
+Mangago
 Mangahere
 MangaHere.onl
+MangaHub
 MangaKa
+Mangakakalot.fun
+MangaKatana
 MangaLix
 MangaManiacs
 Manga Mirai
+Mangamo
+Comivex
+MangaNel
 MangaNow
 MangaOnline.fun
 MangaOwl.io (unoriginal)
 MangaPanda.onl
 MangaPill
 MangaGeko
-MangaReader.in
 MangaReader.site
 MangaRead.org
+MangaToday
 Mangatown
 Manga.uno
-ReiManga
+1Manga.co
+OneManga.info
+Read Comics Online
 Rizz Comic
+RokariComics
 Rolia Scan
+ScansGG
+Genz Toons
+TodayManga
 Voyce.Me
-VyvyManga
-VyvyManga.org
 KokoMangas
 WebNovel
 Weeb Central
